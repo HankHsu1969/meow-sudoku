@@ -1,0 +1,22 @@
+{
+  "name": "meow-sudoku",
+  "version": "1.0.0",
+  "private": true,
+  "description": "喵喵數獨：可愛貓咪主題數獨，50 關，合成音樂與音效",
+  "scripts": {
+    "ios:add": "cap add ios",
+    "ios:assets": "capacitor-assets generate --ios",
+    "ios:sync": "cap sync ios",
+    "ios:open": "cap open ios",
+    "ios:setup": "npm run ios:add && npm run ios:assets && npm run ios:sync"
+  },
+  "dependencies": {
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/haptics": "^7.0.0",
+    "@capacitor/ios": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.0.0"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "appId": "com.example.meowsudoku",
+  "appName": "喵喵數獨",
+  "webDir": "www",
+  "backgroundColor": "#FFE3EA",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#FFE3EA",
+    "scrollEnabled": false
+  }
+}

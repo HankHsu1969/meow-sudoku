@@ -1,0 +1,17 @@
+{
+  "name": "喵喵數獨",
+  "short_name": "喵喵數獨",
+  "description": "和可愛的小貓一起挑戰 50 道數獨謎題",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFE3EA",
+  "theme_color": "#FFE3EA",
+  "lang": "zh-Hant",
+  "icons": [
+    { "src": "img/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>Level Generator</title>
+<style>body{font:13px/1.4 monospace;padding:16px;background:#fff;color:#222}pre{white-space:pre-wrap}</style>
+</head>
+<body>
+<h3>喵喵數獨：50 關題目產生器</h3>
+<p>在瀏覽器開啟本檔即可產生題目，完成後把下方 levels.js 內容存到 www/js/levels.js。</p>
+<pre id="log"></pre>
+<script>
+// 每一題都保證唯一解，並用「人類解法」評估難度：
+//   grade 1 = 只靠唯一候選數 / 隱性唯一數就能解
+//   grade 2 = 還需要區塊摒除、數對
+//   grade 3 = 需要更進階的技巧
+const ALL = 0x1FF;
+const UNITS = [];
+for (let r = 0; r < 9; r++) UNITS.push([...Array(9)].map((_, c) => r * 9 + c));
+for (let c = 0; c < 9; c++) UNITS.push([...Array(9)].map((_, r) => r * 9 + c));
+for (let br = 0; br < 3; br++) for (let bc = 0; bc < 3; bc++) {
+  const u = [];
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) u.push((br * 3 + r) * 9 + bc * 3 + c);
+  UNITS.push(u);
+}
+const PEERS = [];
+for (let i = 0; i < 81; i++) {
+  const s = new Set();
+  UNITS.filter(u => u.includes(i)).forEach(u => u.forEach(x => s.add(x)));
+  s.delete(i);
+  PEERS.push([...s]);
+}
+const popcount = x => { let n = 0; while (x) { x &= x - 1; n++; } return n; };
+const bitIndex = m => 31 - Math.clz32(m); // 0..8
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function shuffle(arr, rng) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function countSolutions(grid, limit = 2) {
+  const rows = new Array(9).fill(0), cols = new Array(9).fill(0), boxes = new Array(9).fill(0);
+  const empties = [];
+  for (let i = 0; i < 81; i++) {
+    const r = (i / 9) | 0, c = i % 9, b = ((r / 3) | 0) * 3 + ((c / 3) | 0);
+    const v = grid[i];
+    if (v) {
+      const m = 1 << (v - 1);
+      if ((rows[r] | cols[c] | boxes[b]) & m) return 0;
+      rows[r] |= m; cols[c] |= m; boxes[b] |= m;
+    } else empties.push([r, c, b]);
+  }
+  let count = 0;
+  function solve(n) {
+    if (n === 0) { count++; return count >= limit; }
+    let bk = -1, bo = 0, bn = 10;
+    for (let k = 0; k < n; k++) {
+      const [r, c, b] = empties[k];
+      const o = ALL & ~(rows[r] | cols[c] | boxes[b]);
+      const pc = popcount(o);
+      if (pc < bn) { bn = pc; bk = k; bo = o; if (pc <= 1) break; }
+    }
+    if (bn === 0) return false;
+    [empties[bk], empties[n - 1]] = [empties[n - 1], empties[bk]];
+    const [r, c, b] = empties[n - 1];
+    let o = bo;
+    while (o) {
+      const m = o & -o; o ^= m;
+      rows[r] |= m; cols[c] |= m; boxes[b] |= m;
+      if (solve(n - 1)) return true;
+      rows[r] ^= m; cols[c] ^= m; boxes[b] ^= m;
+    }
+    [empties[bk], empties[n - 1]] = [empties[n - 1], empties[bk]];
+    return false;
+  }
+  solve(empties.length);
+  return count;
+}
+
+function randomFullGrid(rng) {
+  const g = new Array(81).fill(0);
+  function fill(i) {
+    if (i === 81) return true;
+    let used = 0;
+    for (const p of PEERS[i]) if (g[p]) used |= 1 << (g[p] - 1);
+    const digits = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9].filter(d => !(used & (1 << (d - 1)))), rng);
+    for (const d of digits) { g[i] = d; if (fill(i + 1)) return true; }
+    g[i] = 0;
+    return false;
+  }
+  fill(0);
+  return g;
+}
+
+function grade(puzzle) {
+  const vals = puzzle.slice();
+  const cand = new Array(81).fill(0);
+  for (let i = 0; i < 81; i++) if (!vals[i]) {
+    let used = 0;
+    for (const p of PEERS[i]) if (vals[p]) used |= 1 << (vals[p] - 1);
+    cand[i] = ALL & ~used;
+  }
+  function place(i, d) {
+    vals[i] = d; cand[i] = 0;
+    for (const p of PEERS[i]) cand[p] &= ~(1 << (d - 1));
+  }
+  function singles() {
+    let progress = false;
+    for (let i = 0; i < 81; i++) if (!vals[i] && popcount(cand[i]) === 1) { place(i, bitIndex(cand[i]) + 1); progress = true; }
+    for (const u of UNITS) for (let d = 0; d < 9; d++) {
+      const m = 1 << d;
+      if (u.some(i => vals[i] === d + 1)) continue;
+      const spots = u.filter(i => !vals[i] && (cand[i] & m));
+      if (spots.length === 1) { place(spots[0], d + 1); progress = true; }
+    }
+    return progress;
+  }
+  function lockedAndPairs() {
+    let progress = false;
+    for (const u of UNITS) for (let d = 0; d < 9; d++) {
+      const m = 1 << d;
+      const spots = u.filter(i => !vals[i] && (cand[i] & m));
+      if (spots.length < 2) continue;
+      for (const u2 of UNITS) {
+        if (u2 === u || !spots.every(s => u2.includes(s))) continue;
+        for (const j of u2) if (!spots.includes(j) && !vals[j] && (cand[j] & m)) { cand[j] &= ~m; progress = true; }
+      }
+    }
+    for (const u of UNITS) {
+      const pairs = new Map();
+      for (const i of u) if (!vals[i] && popcount(cand[i]) === 2) {
+        if (!pairs.has(cand[i])) pairs.set(cand[i], []);
+        pairs.get(cand[i]).push(i);
+      }
+      for (const [mask, cells] of pairs) if (cells.length === 2) {
+        for (const j of u) if (!cells.includes(j) && !vals[j] && (cand[j] & mask)) { cand[j] &= ~mask; progress = true; }
+      }
+    }
+    return progress;
+  }
+  if (nakedSinglesOnly(puzzle)) return 0;
+  let level = 1;
+  for (;;) {
+    if (vals.every(v => v)) return level;
+    if (singles()) continue;
+    if (lockedAndPairs()) { level = Math.max(level, 2); continue; }
+    return 3;
+  }
+}
+
+// 只靠「這一格只剩一個數字能填」就能一路解完 → 最適合新手
+function nakedSinglesOnly(puzzle) {
+  const vals = puzzle.slice();
+  for (let progress = true; progress;) {
+    progress = false;
+    for (let i = 0; i < 81; i++) {
+      if (vals[i]) continue;
+      let used = 0;
+      for (const p of PEERS[i]) if (vals[p]) used |= 1 << (vals[p] - 1);
+      const c = ALL & ~used;
+      if (popcount(c) === 1) { vals[i] = bitIndex(c) + 1; progress = true; }
+    }
+  }
+  return vals.every(v => v);
+}
+
+function makePuzzle(rng, target) {
+  const solution = randomFullGrid(rng);
+  const puzzle = solution.slice();
+  const order = shuffle([...Array(41).keys()], rng); // 對稱成對挖洞
+  let givens = 81;
+  for (const i of order) {
+    if (givens <= target) break;
+    const j = 80 - i;
+    const bi = puzzle[i], bj = puzzle[j];
+    puzzle[i] = 0; puzzle[j] = 0;
+    if (countSolutions(puzzle) === 1) givens -= (i === j ? 1 : 2);
+    else { puzzle[i] = bi; puzzle[j] = bj; }
+  }
+  return { puzzle, solution, givens };
+}
+
+// 第 1～10 關是新手暖身：空格從 9 個慢慢增加到 36 個
+const EASY_GIVENS = [72, 68, 64, 60, 57, 54, 51, 49, 47, 45];
+// 第 11 關 44 個提示數 → 第 50 關 25 個
+const targetFor = lv => (lv <= 10 ? EASY_GIVENS[lv - 1] : Math.round(44 - (lv - 11) * (44 - 25) / 39));
+function wantedGrade(lv) {
+  if (lv <= 10) return [0];
+  if (lv <= 15) return [0, 1];
+  if (lv <= 25) return [1];
+  if (lv <= 40) return [2];
+  return [3];
+}
+
+const log = document.getElementById('log');
+function generateAll() {
+  const rng = mulberry32(20261010);
+  const levels = [], report = [];
+  for (let lv = 1; lv <= 50; lv++) {
+    const target = targetFor(lv), want = wantedGrade(lv);
+    let best = null, bestScore = null, attempt;
+    for (attempt = 1; attempt <= 400; attempt++) {
+      const r = makePuzzle(rng, target);
+      const gr = grade(r.puzzle);
+      if (r.givens <= target + 1 && want.includes(gr)) { best = { ...r, gr }; break; }
+      const score = [want.includes(gr) ? 1 : 0, -Math.abs(r.givens - target), gr];
+      if (!bestScore || score[0] > bestScore[0] || (score[0] === bestScore[0] && (score[1] > bestScore[1] || (score[1] === bestScore[1] && score[2] > bestScore[2])))) {
+        bestScore = score; best = { ...r, gr };
+      }
+    }
+    if (lv === 1) {
+      // 教學關：找空格最少的橫列，只留第一個空格，其餘補上解答數字
+      let row = 0, fewest = 10;
+      for (let r = 0; r < 9; r++) {
+        const n = best.puzzle.slice(r * 9, r * 9 + 9).filter(v => !v).length;
+        if (n && n < fewest) { fewest = n; row = r; }
+      }
+      const empties = [...Array(9).keys()].map(c => row * 9 + c).filter(i => !best.puzzle[i]);
+      empties.slice(1).forEach(i => { best.puzzle[i] = best.solution[i]; });
+      best.givens += empties.length - 1;
+    }
+    if (countSolutions(best.puzzle) !== 1) throw new Error('not unique: ' + lv);
+    levels.push({ p: best.puzzle.join(''), s: best.solution.join(''), g: best.gr });
+    report.push(`Level ${String(lv).padStart(2)}: givens=${best.givens} target=${target} grade=${best.gr} attempts=${attempt}`);
+  }
+  return { levels, report };
+}
+
+setTimeout(() => {
+  const t0 = performance.now();
+  const { levels, report } = generateAll();
+  const js = '// 由 tools/gen_levels.html 自動產生（seed 20261010），請勿手動修改\n' +
+    '// 每關格式：[題目(0=空格), 解答, 難度評級]\n' +
+    '// 難度評級：0 = 新手（只要找「只剩一個數字能填」的格子），1 = 基本技巧，2 = 需要區塊摒除/數對，3 = 需要進階技巧\n' +
+    '// 第 1～10 關是新手暖身：空格從 10 個左右慢慢增加到 36 個。\n' +
+    '// 每一題都經過驗證：唯一解。\n' +
+    '// 第 1 關是教學關：保證有一個橫列只剩一個空格（必要時補上解答數字，所以仍是唯一解）。\n' +
+    'window.LEVELS = [\n' + levels.map(l => JSON.stringify([l.p, l.s, l.g])).join(',\n') + '\n];\n';
+  window.__levelsJs = js;
+  window.__report = report;
+  log.textContent = report.join('\n') + `\n\n(${((performance.now() - t0) / 1000).toFixed(1)}s)\n\n` + js;
+  document.title = 'DONE';
+}, 50);
+</script>
+</body>
+</html>
