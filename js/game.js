@@ -112,6 +112,7 @@
     document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + name));
     if (name === 'home') renderHome();
     if (name === 'levels') renderLevels();
+    if (name === 'home') cover.start(); else cover.stop();
     A.playMusic(name === 'game' ? 'game' : 'menu');
   }
 
@@ -177,6 +178,111 @@
     A.sfx.button();
     startLevel(lv);
   });
+
+  // ───────────────────────── 封面示範棋盤 ─────────────────────────
+  // 封面上的數獨會像有人在玩一樣，一格一格填完、閃一下，再從頭開始
+  function candidatesIn(grid, i) {
+    let used = 0;
+    PEERS[i].forEach(p => { if (grid[p]) used |= 1 << (grid[p] - 1); });
+    return [1, 2, 3, 4, 5, 6, 7, 8, 9].filter(d => !(used & (1 << (d - 1))));
+  }
+
+  const cover = {
+    el: $('#cover-board'),
+    cells: [],
+    timer: 0,
+    build() {
+      const [p, s] = LEVELS[14];
+      this.puzzle = [...p].map(Number);
+      this.solution = [...s].map(Number);
+      for (let b = 0; b < 9; b++) {
+        const box = document.createElement('div');
+        box.className = 'cb-box';
+        for (let k = 0; k < 9; k++) {
+          const i = (Math.floor(b / 3) * 3 + Math.floor(k / 3)) * 9 + (b % 3) * 3 + k % 3;
+          const cell = document.createElement('div');
+          cell.className = 'cb-cell';
+          box.appendChild(cell);
+          this.cells[i] = cell;
+        }
+        this.el.appendChild(box);
+      }
+      this.el.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.el.click(); }
+      });
+      this.order = this.solveOrder();
+      this.reset();
+    },
+    // 每一步都挑「只剩一個數字能填」的格子，看起來就像真人在解題
+    solveOrder() {
+      const g = this.puzzle.slice();
+      const order = [];
+      for (let round = 0; round < 81 && g.includes(0); round++) {
+        const ready = [];
+        for (let i = 0; i < 81; i++) if (!g[i] && candidatesIn(g, i).length === 1) ready.push(i);
+        if (!ready.length) break;
+        ready.sort(() => Math.random() - 0.5).forEach(i => { g[i] = this.solution[i]; order.push(i); });
+      }
+      for (let i = 0; i < 81; i++) if (!g[i]) order.push(i);
+      return order;
+    },
+    reset() {
+      this.cur = this.puzzle.slice();
+      this.step = 0;
+      this.pause = 0;
+      // 幾個比較晚才填的空格，先放上鉛筆筆記
+      this.notes = {};
+      this.order.slice(-16).filter((_, k) => k % 4 === 1).forEach(i => { this.notes[i] = candidatesIn(this.cur, i); });
+      for (let i = 0; i < 81; i++) this.paint(i);
+      this.highlight(this.order[0]);
+    },
+    paint(i, pop = false) {
+      const el = this.cells[i];
+      const v = this.cur[i];
+      el.classList.toggle('f', v > 0 && !this.puzzle[i]);
+      if (v) el.innerHTML = `<span>${v}</span>`;
+      else if (this.notes[i]) el.innerHTML = '<div class="cb-notes">' + [1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => `<i>${this.notes[i].includes(d) ? d : ''}</i>`).join('') + '</div>';
+      else el.innerHTML = '';
+      if (pop) replay(el, 'pop');
+    },
+    highlight(t) {
+      this.cells.forEach((el, i) => {
+        el.classList.toggle('sel', i === t);
+        el.classList.toggle('peer', t !== undefined && i !== t && PEERS[t].includes(i));
+      });
+    },
+    tick() {
+      if (document.hidden || screen !== 'home') return;
+      if (this.step < this.order.length) {
+        const i = this.order[this.step++];
+        const d = this.solution[i];
+        this.cur[i] = d;
+        delete this.notes[i];
+        PEERS[i].forEach(p => {
+          if (this.notes[p] && this.notes[p].includes(d)) {
+            this.notes[p] = this.notes[p].filter(x => x !== d);
+            this.paint(p);
+          }
+        });
+        this.paint(i, true);
+        if (this.step < this.order.length) {
+          this.highlight(this.order[this.step]);
+        } else {
+          this.highlight();
+          this.cells.forEach((el, k) => replay(el, 'wave', (Math.floor(k / 9) + k % 9) * 45));
+          this.pause = 5;
+        }
+      } else if (--this.pause <= 0) {
+        this.reset();
+      }
+    },
+    start() {
+      this.stop();
+      if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      this.timer = setInterval(() => this.tick(), 700);
+    },
+    stop() { clearInterval(this.timer); },
+  };
 
   // ───────────────────────── 遊戲狀態 ─────────────────────────
   const G = {};
@@ -967,6 +1073,7 @@
 
   // ───────────────────────── 啟動 ─────────────────────────
   buildBoard();
+  cover.build();
   show('home');
 
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !window.Capacitor) {
