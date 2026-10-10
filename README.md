@@ -2,6 +2,8 @@
 
 可愛貓咪主題的數獨遊戲，共 50 關，iPhone App（Capacitor）＋ 也能直接當網頁 / PWA 玩。
 
+**▶ 線上試玩：https://hankhsu1969.github.io/meow-sudoku/**
+
 - **50 關、5 個章節**：毛線球（入門）→ 小魚乾（簡單）→ 貓抓板（普通）→ 貓薄荷（困難）→ 貓咪之王（專家）
   - 每題都驗證過「唯一解」，並用人類解題技巧評估難度，讓難度平順上升
   - 1–10 關是新手暖身：空格從 10 個慢慢增加到 36 個，只要找「這格只剩一個數字能填」就能解完
@@ -27,7 +29,13 @@ powershell -ExecutionPolicy Bypass -File tools/serve.ps1
 
 ## 2. 先在 iPhone 上玩（PWA，免 Mac）
 
-把 `www/` 資料夾部署到任何靜態網站空間（Netlify、Vercel、GitHub Pages…），用 iPhone 的 Safari 打開網址 →「分享」→「加入主畫面」，就會變成有圖示、全螢幕、可離線的 App。
+用 iPhone 的 Safari 打開 https://hankhsu1969.github.io/meow-sudoku/ →「分享」→「加入主畫面」，就會變成有圖示、全螢幕、可離線的 App。
+
+網站是 GitHub Pages 從 `gh-pages` 分支發佈的（內容就是 `www/` 資料夾）。修改 `www/` 並 push 到 `main` 之後，再執行下面這行更新網站：
+
+```bash
+git push origin `git subtree split --prefix www main`:gh-pages --force
+```
 
 ## 3. 打包成真正的 iPhone App（需要 Mac + Xcode）
 
