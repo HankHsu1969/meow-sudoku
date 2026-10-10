@@ -200,8 +200,8 @@ svg { width: 1em; height: 1em; display: block; }
 @media (min-aspect-ratio: 5/4) and (min-width: 760px) and (min-height: 480px) {
   #screen-home { background-image: url("../img/bg_home_wide.jpg"); background-position: center bottom; }
   .home-layout {
-    max-width: 1180px; column-gap: clamp(40px, 7vw, 120px);
-    grid-template-columns: minmax(300px, 1fr) auto;
+    max-width: 1180px; column-gap: clamp(24px, 4vw, 72px);
+    grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr auto auto 1fr;
     grid-template-areas: ". art" "hero art" "actions art" ". art";
     --cb: min(42vw, calc((var(--vh) - 120px) / 1.55), 560px);
