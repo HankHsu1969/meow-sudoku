@@ -1,6 +1,6 @@
 ﻿# 簡易本機伺服器（不需要安裝 Node / Python）
 #   powershell -ExecutionPolicy Bypass -File tools/serve.ps1 [-Port 8080]
-param([int]$Port = 8080)
+param([int]$Port = $(if ($env:PORT) { [int]$env:PORT } else { 8080 }))
 $root = Join-Path (Split-Path -Parent $PSScriptRoot) "www"
 $types = @{
   ".html" = "text/html; charset=utf-8"; ".js" = "text/javascript; charset=utf-8"; ".css" = "text/css; charset=utf-8"

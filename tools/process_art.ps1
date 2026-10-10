@@ -75,6 +75,7 @@ function Save-Icon($size, $path) {
 
 Resize-Jpeg "bg_home.png" "bg_home.jpg" 1080 1910
 Resize-Jpeg "bg_game.png" "bg_game.jpg" 1080 1910
+Resize-Jpeg "bg_home_wide.png" "bg_home_wide.jpg" 1920 1086   # 桌機版封面背景
 Crop-Sprite "cat_wave.png" "cat_wave.png" 560
 Crop-Sprite "cat_think.png" "cat_think.png" 400
 Crop-Sprite "cat_star.png" "cat_star.png" 560

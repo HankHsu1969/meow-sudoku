@@ -25,17 +25,31 @@
       <button class="icon-btn" data-action="help" aria-label="遊戲說明"><svg><use href="#i-help"/></svg></button>
       <button class="icon-btn" data-action="settings" aria-label="設定"><svg><use href="#i-sliders"/></svg></button>
     </div>
-    <div class="home-hero">
-      <img class="hero-cat" src="img/cat_wave.png" alt="">
-      <h1 class="logo"><span class="logo-a">喵喵</span><span class="logo-b">數獨</span></h1>
-      <p class="tagline">和小貓一起挑戰 50 道謎題</p>
-    </div>
-    <div class="home-actions">
-      <button class="btn btn-primary btn-big" data-action="play">
-        <svg class="btn-ico"><use href="#i-paw"/></svg><span id="play-label">開始遊戲</span>
-      </button>
-      <button class="btn btn-light" data-action="levels"><svg class="btn-ico"><use href="#i-grid"/></svg>選擇關卡</button>
-      <div class="home-stars"><svg class="star-ico"><use href="#i-star"/></svg><span id="home-stars">0 / 150</span></div>
+    <div class="home-layout">
+      <div class="home-hero">
+        <h1 class="logo"><span class="logo-a">喵喵</span><span class="logo-b">數獨</span></h1>
+        <p class="tagline">和小貓一起挑戰 50 道數獨謎題</p>
+      </div>
+
+      <!-- 封面棋盤：會自己一格一格解題的示範數獨 -->
+      <div class="home-art">
+        <div class="cover">
+          <svg class="cover-deco d1"><use href="#i-star"/></svg>
+          <svg class="cover-deco d2"><use href="#i-paw"/></svg>
+          <svg class="cover-deco d3"><use href="#i-star"/></svg>
+          <div class="cover-board" id="cover-board" data-action="play" role="button" tabindex="0" aria-label="開始遊戲"></div>
+          <img class="cover-cat" src="img/cat_wave.png" alt="">
+          <img class="cover-cat2" src="img/cat_think.png" alt="">
+        </div>
+      </div>
+
+      <div class="home-actions">
+        <button class="btn btn-primary btn-big" data-action="play">
+          <svg class="btn-ico"><use href="#i-paw"/></svg><span id="play-label">開始遊戲</span>
+        </button>
+        <button class="btn btn-light" data-action="levels"><svg class="btn-ico"><use href="#i-grid"/></svg>選擇關卡</button>
+        <div class="home-stars"><svg class="star-ico"><use href="#i-star"/></svg><span id="home-stars">0 / 150</span></div>
+      </div>
     </div>
   </section>
 
